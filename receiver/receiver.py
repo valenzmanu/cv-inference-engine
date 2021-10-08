@@ -1,4 +1,5 @@
 import logging
+import threading
 
 from gevent import pywsgi
 from requests_toolbelt.multipart import decoder
@@ -15,7 +16,7 @@ class Receiver:
         self.server.serve_forever()
 
     def handle(self, env, start_response):
-        logging.debug(env)
+        # logging.debug(env)
         content_type = env.get('CONTENT_TYPE')
         content = env.get('wsgi.input').read(int(env.get('CONTENT_LENGTH', '0')))
         parts = decoder.MultipartDecoder(content, content_type)
@@ -32,7 +33,8 @@ class Receiver:
             for item in lst:
                 name = item.get("params").get("name")
                 data = item.get('content')
-                self.handle_on_request(data, name)
+                thread = threading.Thread(target=self.handle_on_request, args=(data, name))
+                thread.start()
 
         start_response('200 OK', [('Content-Type', 'text/html')])
         response = {'success': True}
